@@ -6,7 +6,7 @@ import 'package:shop_multi_web_admin/views/screens/side_bar_screens/categories_s
 import 'package:shop_multi_web_admin/views/screens/side_bar_screens/dashboard_screen.dart';
 import 'package:shop_multi_web_admin/views/screens/side_bar_screens/orders_screen.dart';
 import 'package:shop_multi_web_admin/views/screens/side_bar_screens/products_screen.dart';
-import 'package:shop_multi_web_admin/views/screens/side_bar_screens/upload_banner.dart';
+import 'package:shop_multi_web_admin/views/screens/side_bar_screens/upload_banner_screen.dart';
 import 'package:shop_multi_web_admin/views/screens/side_bar_screens/venders_screen.dart';
 import 'package:shop_multi_web_admin/views/screens/side_bar_screens/withdraw_screen.dart';
 

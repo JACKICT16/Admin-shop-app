@@ -1,13 +1,70 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:shop_multi_web_admin/views/screens/side_bar_screens/widgets/category_widget.dart';
 
-class CategoriesScreen extends StatelessWidget {
+class CategoriesScreen extends StatefulWidget {
   static const String routeName = '\CategoriesScreen';
 
-  final GlobalKey<FormState> _FromKey = GlobalKey<FormState>();
+  @override
+  State<CategoriesScreen> createState() => _CategoriesScreenState();
+}
 
-  uploadCategory() {
-    if (_FromKey.currentState!.validate()) {
-      print('Good Guy');
+class _CategoriesScreenState extends State<CategoriesScreen> {
+  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GlobalKey<FormState> _fromKey = GlobalKey<FormState>();
+
+  dynamic _image;
+  //ข้อมูลที่มีความยืดหยุ่นและสามารถเก็บข้อมูลของประเภทใดๆ ได้ โดยไม่จำเป็นต้องระบุประเภทข้อมูลนั้นให้แน่ชัดตอนประกาศตัวแปร
+
+  String? fileName;
+
+  late String categoryName;
+
+//เฉพาะรูป ถ้าอยากได้ทุกแบบ ก็ใช้ Filetype.any
+  _pickImage() async {
+    FilePickerResult? result = await FilePicker.platform
+        .pickFiles(allowMultiple: false, type: FileType.image);
+
+    if (result != null) {
+      setState(() {
+        _image = result.files.first.bytes;
+
+        fileName = result.files.first.name;
+      });
+    }
+  }
+
+  _uploadCategoryBannerToStorage(dynamic image) async {
+    Reference ref = _storage.ref().child('categoryImages').child(fileName!);
+
+    UploadTask uploadTask = ref.putData(image);
+
+    TaskSnapshot snapshot = await uploadTask;
+
+    String downloadUrl = await snapshot.ref.getDownloadURL();
+
+    return downloadUrl;
+  }
+
+  uploadCategory() async {
+    EasyLoading.show();
+    if (_fromKey.currentState!.validate()) {
+      String imageUrl = await _uploadCategoryBannerToStorage(_image);
+
+      await _firestore.collection('categories').doc(fileName).set({
+        'image': imageUrl,
+        'categoryName': categoryName,
+      }).whenComplete(() {
+        EasyLoading.dismiss();
+        setState(() {
+          _image = null;
+          _fromKey.currentState!.reset();
+        });
+      });
     } else {
       print('OH  Bad Guy');
     }
@@ -17,7 +74,7 @@ class CategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
         child: Form(
-      key: _FromKey,
+      key: _fromKey,
       child: Column(
         children: [
           Container(
@@ -48,9 +105,14 @@ class CategoriesScreen extends StatelessWidget {
                         border: Border.all(color: Colors.grey.shade800),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Center(
-                        child: Text('Category'),
-                      ), //ถ้า_image ไม่เป็นค่าว่าง ' ? ' สัญลักณ์นี้แค่ทำงานตามเงื่อนไขและคืนค่า เป็นจริงหรือเท็จแล้วส่งค่าอะไรให้ (ตัวดำเนินการทางตรรกะนี้ใช้ในการตรวจสอบเงื่อนไขและทำงานตามเงื่อนไขนั้น ๆ)
+                      child: _image != null
+                          ? Image.memory(
+                              _image,
+                              fit: BoxFit.cover,
+                            )
+                          : Center(
+                              child: Text('Category'),
+                            ), //ถ้า_image ไม่เป็นค่าว่าง ' ? ' สัญลักณ์นี้แค่ทำงานตามเงื่อนไขและคืนค่า เป็นจริงหรือเท็จแล้วส่งค่าอะไรให้ (ตัวดำเนินการทางตรรกะนี้ใช้ในการตรวจสอบเงื่อนไขและทำงานตามเงื่อนไขนั้น ๆ)
                     ),
                     SizedBox(
                       height: 20,
@@ -58,7 +120,9 @@ class CategoriesScreen extends StatelessWidget {
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                           primary: Colors.yellow.shade900),
-                      onPressed: () {},
+                      onPressed: () {
+                        _pickImage();
+                      },
                       child: Text('Upload Images'),
                     ),
                   ],
@@ -68,6 +132,9 @@ class CategoriesScreen extends StatelessWidget {
                 child: SizedBox(
                   width: 175,
                   child: TextFormField(
+                    onChanged: (value) {
+                      categoryName = value;
+                    },
                     validator: (value) {
                       if (value!.isEmpty) {
                         return 'Please Category Name Must not Be Empty';
@@ -95,6 +162,26 @@ class CategoriesScreen extends StatelessWidget {
               ),
             ],
           ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Divider(
+              color: Colors.grey,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              alignment: Alignment.topLeft,
+              child: Text(
+                'Categories',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          CategoryWidget(),
         ],
       ),
     ));
